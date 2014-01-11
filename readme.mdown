@@ -1,0 +1,5 @@
+# Useful Linux Scripts
+
+A collection of useful linux scripts that i've created over the years.
+
+Scripts are mostly geared toward RHEL installations and might need minor modifications for different distros.
