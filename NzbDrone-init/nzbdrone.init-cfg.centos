@@ -16,7 +16,7 @@ nzbdroneUser=media
 #============================================
 
 # nzbdrone path
-nzbdroneHome=/usr/share/nzbdrone
+nzbdroneHome=/opt/nzbdrone
 
 # nzbdrone options
 # ex. --nobrowser
@@ -52,7 +52,7 @@ monoExec="${monoBin}/mono"
 sqliteVerReq="3.8.5"
 
 # sqlite path
-sqlitHome=/usr/share/nzbdrone/sqlite3.8.5
+sqlitHome=/opt/sqlite3.8.5
 
 # sqlite bin path
 sqliteBin="${sqlitHome}/bin"
