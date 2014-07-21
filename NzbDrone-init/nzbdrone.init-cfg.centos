@@ -14,7 +14,6 @@ nzbdroneUser=nzbdrone
 #============================================
 # NZB Drone
 #============================================
-
 # nzbdrone path
 nzbdroneHome=/opt/nzbdrone
 
@@ -28,7 +27,6 @@ nzbdroneExec="${nzbdroneHome}/NzbDrone.exe"
 #============================================
 # Mono 
 #============================================
-
 # mono path
 monoHome=/opt/mono
 
