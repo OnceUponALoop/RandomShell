@@ -1,0 +1,235 @@
+#!/bin/bash
+#===================================================================================
+#
+# nzbdrone     Start/Stop the NZB Drone daemon.
+#
+# chkconfig:   2345 90 20
+# description: NZBDrone is a PVR for newsgroup users. It can monitor \
+#              multiple RSS feeds for new episodes of your favourite \
+#              shows and will grab, sorts and renames them. It can also \
+#              be configured to automatically upgrade the quality of files \
+#              already downloaded if a better quality format becomes available.
+#
+# Author       Firas AlShafei
+#
+# Version      v1.0 - 07/20/2014
+#
+#===================================================================================
+
+### BEGIN INIT INFO
+# Provides:          nzbdrone NZBDrone NzbDrone
+# Required-Start:    $local_fs $remote_fs $network
+# Required-Stop:     $local_fs $remote_fs $network
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: Control NZB Drone daemon
+# Description:       NZBDrone is a PVR for newsgroup users. It can monitor
+#                    multiple RSS feeds for new episodes of your favourite
+#                    shows and will grab, sorts and renames them. It can also
+#                    be configured to automatically upgrade the quality of files
+#                    already downloaded if a better quality format becomes available.
+### END INIT INFO
+
+#====================================
+# Exit Codes for Status Action
+#====================================
+# 0:    program is running or service is OK
+# 1:    program is dead and /var/run pid file exists
+# 2:    program is dead and /var/lock lock file exists
+# 3:    program is not running
+# 4:    program or service status is unknown
+
+#====================================
+# Exit Codes for non-Status Actions
+#====================================
+# 1:    generic or unspecified error (current practice)
+# 2:    invalid or excess argument(s)
+# 3:    unimplemented feature (for example, "reload")
+# 4:    user had insufficient privilege
+# 5:    program is not installed
+# 6:    program is not configured
+# 7:    program is not running
+
+#-------------------------------------------------------------------------------
+# Script Variables
+#-------------------------------------------------------------------------------
+
+serviceName="nzbdrone"
+lockFile=/var/lock/subsys/${serviceName}
+pidFile=/var/run/${serviceName}.pid
+configFile=/etc/sysconfig/${serviceName}
+
+#-------------------------------------------------------------------------------
+# Script Functions
+#-------------------------------------------------------------------------------
+pidtree() (
+    [ -n "$ZSH_VERSION"  ] && setopt shwordsplit
+    declare -A CHILDS
+    while read P PP;do
+        CHILDS[$PP]+=" $P"
+    done < <(ps -e -o pid= -o ppid=)
+
+    walk() {
+        echo $1
+        for i in ${CHILDS[$1]};do
+            walk $i
+        done
+    }
+
+    for i in "$@";do
+        walk $i
+    done
+)
+
+updatePID(){
+    # Check the PID file
+    if [ -f ${pidFile} ]; then
+        for i in $(cat ${pidFile}); do
+            # Check if the pid is running
+            checkpid $i
+            # if its not then remove it from list
+            if [ "$?" -ne "0" ]; then
+                sed "/$i/d" -i ${pidFile}
+            fi
+        done
+
+        # Check if file is now empty
+        # this indicates a manual shutdown or restart
+        # If empty lookup the PID again and populate the file
+        if ! [ -s ${pidFile} ]; then
+            PID=$(pgrep -f ''"${monoExec}.*${nzbdroneExec}"'')
+            PID=$(pidtree $PID)
+            echo "$PID" > ${pidFile}
+        fi
+    fi
+}
+
+checkPrereq(){
+
+    # Check mono exists and executable
+    if ! [ -x $monoExec ]; then
+        echo "Error: Mono executable (${monoExec}) not found or not executable"
+        exit 5
+    fi
+
+    # Check nzbdrone exists
+    if ! [ -f $nzbdroneExec ]; then
+        echo "Error: nzbndrone executable (${nzbdroneExec}) not found"
+        exit 5
+    fi
+
+    # Check sqlite3 exists and executable
+    if ! [ -x $sqliteExec ]; then
+        echo "Error: sqlite3 executable (${sqliteExec}} not found or not executable"
+        exit 5
+    fi
+
+    # Check sqlite3 version
+    sqliteVer=$(${sqliteExec} -version)
+    if ! [ "${sqliteVerReq}" =  "$(echo -e "$sqliteVerReq\n${sqliteVer}" | sort -V | head -n1)" ]; then
+        echo "Incorrect sqlite3 version detected"
+        echo -e "Need: ${sqliteVerReq}\nFound: ${sqliteVer}"
+        exit 5
+    fi
+}
+
+start() {
+    echo "Starting ${serviceName}..."
+    if [ "$(getStatus >/dev/null 2>&1; echo $?)" -eq "0" ]; then
+        echo_failure
+        echo "${serviceName} is already running"
+        exit 2
+    fi
+    daemon --user=${nzbdroneUser} ${nice} "${daemonCmd}" >/dev/null 2>&1 &
+    exitCode=$?
+    if [ $exitCode -eq 0 ]; then
+        PID=
+        PID=$(pgrep -f ''"${monoExec}.*${nzbdroneExec}"'')
+        PID=$(pidtree $PID)
+        success
+        echo "$serviceName started (pid "$PID")"
+        echo "$PID" > ${pidFile}
+        touch $lockFile
+    else
+        failure
+        echo "Error: (exit code $exitCode)"
+    fi
+
+    return $exitCode
+}
+
+stop() {
+    echo -n "Stopping ${serviceName}: "
+    killproc -p ${pidFile} 
+    #${daemonCmd}
+    exitCode=$?
+    echo
+    if [ $exitCode -eq 0 ]; then
+        rm -f $lockFile
+        rm -f ${pidFile}
+    fi
+    return $exitCode
+}
+
+getStatus(){
+    status -p ${pidFile} ${serviceName}
+}
+
+restart(){
+    stop
+    start
+}
+
+#-------------------------------------------------------------------------------
+# Script Main
+#-------------------------------------------------------------------------------
+
+# Initialize exit code
+exitCode=0
+
+# Check that user has correct privilages
+if [ $UID -ne 0 ]; then
+    if [ "$1" != "status" ]; then
+        echo "Error: User has insufficient privilege."
+        exit 4
+    fi
+fi
+
+# Source function library.
+. /etc/init.d/functions
+
+# Source configuration file if it exists
+if [ -f "${configFile}" ]; then
+        . ${configFile}
+else
+    echo "Error: Configuration file \(${configFile}\) doesnt exist"
+    exit 6
+fi
+
+# Parse user input
+case "$1" in
+  start)
+        checkPrereq
+        updatePID
+        start
+        ;;
+  stop)
+        checkPrereq
+        updatePID
+        stop
+        ;;
+  restart)
+        checkPrereq
+        updatePID
+        restart
+        ;;
+  status)
+        updatePID
+        getStatus
+        ;;
+  *)
+        echo $"Usage: $0 {start|stop|restart|status}"
+        exit 3
+esac
+
+exit $?

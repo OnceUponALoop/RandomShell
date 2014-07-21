@@ -1,0 +1,71 @@
+#===================================================================================
+#
+# nzbdrone init service config file
+#
+# Author       Firas AlShafei
+#
+# Version      v1.0 - 07/20/2014
+#
+#===================================================================================
+
+# User to run nzbdrone
+nzbdroneUser=media
+
+#============================================
+# NZB Drone
+#============================================
+
+# nzbdrone path
+nzbdroneHome=/usr/share/nzbdrone
+
+# nzbdrone options
+# ex. --nobrowser
+nzbdroneOptions=
+
+# nzbdrone binary
+nzbdroneExec="${nzbdroneHome}/NzbDrone.exe"
+
+#============================================
+# Mono 
+#============================================
+
+# mono path
+monoHome=/opt/mono
+
+# mono options
+# ex. --config FILE
+monoOptions=
+
+# mono bin path
+monoBin="${monoHome}/bin"
+
+# mono lib path
+monoLib="${monoHome}/lib"
+
+# mono binary
+monoExec="${monoBin}/mono"
+
+#============================================
+# Sqlite
+#============================================
+# Required sqlite version
+sqliteVerReq="3.8.5"
+
+# sqlite path
+sqlitHome=/usr/share/nzbdrone/sqlite3.8.5
+
+# sqlite bin path
+sqliteBin="${sqlitHome}/bin"
+
+# sqlite lib path
+sqliteLib="${sqlitHome}/lib"
+
+# sqlite binary
+sqliteExec="${sqliteBin}/sqlite3"
+
+#============================================
+# Parse command
+#============================================
+# Command called by init script
+daemonCmd="${monoExec} ${monoOptions} ${nzbdroneExec} ${nzbdroneOptions}"
+
