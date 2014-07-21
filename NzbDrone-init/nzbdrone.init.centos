@@ -104,7 +104,7 @@ updatePID(){
     fi
 }
 
-checkPrereq(){
+prereq(){
 
     # Check mono exists and executable
     if ! [ -x $monoExec ]; then
@@ -131,6 +131,10 @@ checkPrereq(){
         echo -e "Need: ${sqliteVerReq}\nFound: ${sqliteVer}"
         exit 5
     fi
+
+    # Set enviroment variables to point to correct sqlite and mono versions
+    export PATH=${sqliteBin}:${monoBin}:$PATH
+    export LD_LIBRARY_PATH=${sqliteLib}:${monoLib}:$LD_LIBRARY_PATH
 }
 
 start() {
@@ -188,6 +192,7 @@ restart(){
 exitCode=0
 
 # Check that user has correct privilages
+# Status option can be called by any user
 if [ $UID -ne 0 ]; then
     if [ "$1" != "status" ]; then
         echo "Error: User has insufficient privilege."
@@ -209,17 +214,17 @@ fi
 # Parse user input
 case "$1" in
   start)
-        checkPrereq
+        prereq
         updatePID
         start
         ;;
   stop)
-        checkPrereq
+        prereq
         updatePID
         stop
         ;;
   restart)
-        checkPrereq
+        prereq
         updatePID
         restart
         ;;
